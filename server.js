@@ -7,6 +7,7 @@ const OpenAI = require("openai");
 const app = express();
 app.use(cors());
 app.use(express.json());
+
 app.get("/", (req, res) => {
   res.json({ message: "AIDA backend is running" });
 });
@@ -62,19 +63,20 @@ Qaydalar:
 - Hər sualda 4 cavab variantı olsun
 - Yalnız 1 düzgün cavab olsun
 - Hər sual üçün qısa izah ver
-- Yalnız JSON array qaytar
 - Heç bir əlavə mətn yazma
-- \`\`\`json blokundan istifadə etmə
+- Cavabı yalnız JSON şəklində qaytar
 
-Format:
-[
-  {
-    "question": "Sual mətni",
-    "options": ["A", "B", "C", "D"],
-    "correctIndex": 0,
-    "explanation": "Qısa izah"
-  }
-]
+Cavab formatı mütləq belə olsun:
+{
+  "questions": [
+    {
+      "question": "Sual mətni",
+      "options": ["A", "B", "C", "D"],
+      "correctIndex": 0,
+      "explanation": "Qısa izah"
+    }
+  ]
+}
 `;
 
     const completion = await client.chat.completions.create({
@@ -83,7 +85,7 @@ Format:
         {
           role: "system",
           content:
-            "Sən yalnız düzgün JSON array qaytaran sistemsən. Heç bir əlavə mətn yazma.",
+            "Sən yalnız düzgün JSON qaytaran sistemsən. Heç bir əlavə mətn, izah, markdown və ya ```json bloku yazma.",
         },
         {
           role: "user",
@@ -92,30 +94,36 @@ Format:
       ],
     });
 
-    const text = completion.choices?.[0]?.message?.content ?? "[]";
+    const text = completion.choices?.[0]?.message?.content ?? "{}";
 
-    // AI bəzən ```json ... ``` formatında qaytarır, onu təmizləyirik
     const cleanedText = text
       .replace(/```json/gi, "")
       .replace(/```/g, "")
       .trim();
 
-    let questions;
+    let parsed;
 
     try {
-      questions = JSON.parse(cleanedText);
+      parsed = JSON.parse(cleanedText);
     } catch (e) {
-      console.error("QUIZ JSON ERROR:", text);
+      console.error("QUIZ JSON ERROR RAW:", text);
       return res.status(500).json({
         error: "JSON parse error",
         raw: text,
       });
     }
 
-    if (!Array.isArray(questions)) {
+    let questions = [];
+
+    if (Array.isArray(parsed)) {
+      questions = parsed;
+    } else if (parsed && Array.isArray(parsed.questions)) {
+      questions = parsed.questions;
+    } else {
+      console.error("QUIZ FORMAT ERROR:", parsed);
       return res.status(500).json({
         error: "Quiz format error",
-        raw: questions,
+        raw: parsed,
       });
     }
 
@@ -129,7 +137,7 @@ Format:
   }
 });
 
-// VIDEO + KİTAB (manual mapping)
+// CONTENT MAP
 const contentMap = {
   "Riyaziyyat": {
     "20 dairəsində ədədlər": {
@@ -156,11 +164,72 @@ const contentMap = {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
+    "İki rəqəmli ədədlərin toplanması": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "İki rəqəmli ədədlərin çıxılması": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Vurma və bölməyə giriş": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Məsələ həlli": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "1000 dairəsində ədədlər": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Sütunla toplama": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Sütunla çıxma": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Vurma cədvəli": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Qalıqlı bölmə": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
     "Sahə və perimetr": {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
+    "Kəsrlərə giriş": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Çoxrəqəmli ədədlər": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Sürət məsələləri": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Mürəkkəb tənliklər": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Bucaqlar": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Diaqramlar və cədvəllərlə iş": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
   },
+
   "Ana dili": {
     "Əlifba": {
       video: "https://video.edu.az",
@@ -174,11 +243,72 @@ const contentMap = {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
+    "Sözlərin böyük hərflə yazılması": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
     "Sadə cümlələr": {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
+    "Sözün heca tərkibi": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Səsartımı və səs düşümü": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Ad bildirən sözlər": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Əlamət bildirən sözlər": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Hərəkət bildirən sözlər": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Sözün kökü və şəkilçisi": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Mürəkkəb sözlər": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Cümlənin növləri": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Mətni hissələrə ayırma": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "İsim": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Sifət": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Say": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Fel": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Orfoqrafiya qaydaları": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
   },
+
   "İngilis dili": {
     "Salamlaşma": {
       video: "https://video.edu.az",
@@ -192,7 +322,44 @@ const contentMap = {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
+    "Ailə üzvləri": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Heyvanlar": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Bədən üzvləri": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Oyuncaqlar": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "To be feli": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Have got / Has got": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Can / Can't": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Meyvə və tərəvəz": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Present Continuous": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
   },
+
   "Həyat bilgisi": {
     "Mən və ailəm": {
       video: "https://video.edu.az",
@@ -206,13 +373,118 @@ const contentMap = {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
+    "Şəxsi gigiyena": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Ailə şəcərəsi": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Təbiət": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Heyvanlar": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Yol hərəkəti qaydaları": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Hüquq və vəzifələr": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Ekologiya": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Sağlamlıq və təhlükəsizlik": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Fövqəladə hallar": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Mən və cəmiyyət": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Günəş sistemi": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Ətraf mühitin qorunması": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Vətənimiz Azərbaycan": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
   },
+
   "Təsviri incəsənət": {
     "Əsas rənglər": {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
     "Boyama": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Fiqurlar": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Plastilinlə iş": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Qarışıq rənglər": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Simmetriya": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Sadə rəsmlər": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Dekorativ işlər": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Natürmort": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Mənzərə janrı": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Portret": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Xalçaçılıq elementləri": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Mənzərə": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Dekorativ tətbiqi sənət": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Xalçaçılıq": {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
