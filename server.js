@@ -54,6 +54,9 @@ app.post("/generate-quiz", async (req, res) => {
   try {
     const { classLevel, subject, topic } = req.body;
 
+    console.log("=== GENERATE QUIZ START ===");
+    console.log("REQUEST BODY:", req.body);
+
     const prompt = `
 ${classLevel}-ci sinif üçün "${subject}" fənnindən "${topic}" mövzusu üzrə 15 sual hazırla.
 
@@ -64,7 +67,7 @@ Qaydalar:
 - Yalnız 1 düzgün cavab olsun
 - Hər sual üçün qısa izah ver
 - Heç bir əlavə mətn yazma
-- Cavabı yalnız JSON şəklində qaytar
+- Yalnız JSON qaytar
 
 Cavab formatı mütləq belə olsun:
 {
@@ -79,13 +82,15 @@ Cavab formatı mütləq belə olsun:
 }
 `;
 
+    console.log("PROMPT READY");
+
     const completion = await client.chat.completions.create({
       model: "gemini-2.5-flash",
       messages: [
         {
           role: "system",
           content:
-            "Sən yalnız düzgün JSON qaytaran sistemsən. Heç bir əlavə mətn, izah, markdown və ya ```json bloku yazma.",
+            "Sən yalnız düzgün JSON qaytaran sistemsən. Heç bir əlavə mətn, markdown, ```json bloku və ya izah yazma.",
         },
         {
           role: "user",
@@ -94,22 +99,31 @@ Cavab formatı mütləq belə olsun:
       ],
     });
 
+    console.log("RAW COMPLETION:", JSON.stringify(completion, null, 2));
+
     const text = completion.choices?.[0]?.message?.content ?? "{}";
+    console.log("RAW TEXT:", text);
 
     const cleanedText = text
       .replace(/```json/gi, "")
       .replace(/```/g, "")
       .trim();
 
+    console.log("CLEANED TEXT:", cleanedText);
+
     let parsed;
 
     try {
       parsed = JSON.parse(cleanedText);
+      console.log("PARSED OK:", JSON.stringify(parsed, null, 2));
     } catch (e) {
-      console.error("QUIZ JSON ERROR RAW:", text);
+      console.error("JSON PARSE ERROR:", e.message);
       return res.status(500).json({
         error: "JSON parse error",
+        step: "parse",
         raw: text,
+        cleaned: cleanedText,
+        details: e.message,
       });
     }
 
@@ -117,21 +131,35 @@ Cavab formatı mütləq belə olsun:
 
     if (Array.isArray(parsed)) {
       questions = parsed;
+      console.log("FORMAT: ARRAY");
     } else if (parsed && Array.isArray(parsed.questions)) {
       questions = parsed.questions;
+      console.log("FORMAT: OBJECT WITH QUESTIONS");
     } else {
       console.error("QUIZ FORMAT ERROR:", parsed);
       return res.status(500).json({
         error: "Quiz format error",
+        step: "format",
         raw: parsed,
       });
     }
 
+    console.log("QUESTIONS COUNT:", questions.length);
+
+    if (!questions.length) {
+      return res.status(500).json({
+        error: "No questions returned",
+        step: "empty_questions",
+      });
+    }
+
+    console.log("=== GENERATE QUIZ SUCCESS ===");
     res.json({ questions });
   } catch (e) {
-    console.error("QUIZ ERROR:", e);
+    console.error("QUIZ ERROR FULL:", e);
     res.status(500).json({
       error: "Quiz error",
+      step: "outer_catch",
       details: e.message,
     });
   }
