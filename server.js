@@ -54,7 +54,7 @@ app.post("/chat", async (req, res) => {
     const { message } = req.body;
 
     const completion = await client.chat.completions.create({
-      model: "openrouter/free",
+      model: "openai/gpt-oss-20b",
       messages: [
         {
           role: "system",
@@ -113,7 +113,7 @@ Cavab formatı mütləq belə olsun:
 `;
 
     const completion = await client.chat.completions.create({
-      model: "openrouter/free",
+      model: "openai/gpt-oss-20b",
       messages: [
         {
           role: "system",
