@@ -17,6 +17,40 @@ const client = new OpenAI({
   baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
 });
 
+// DEBUG GEMINI
+app.get("/debug-gemini", async (req, res) => {
+  try {
+    const hasKey = !!process.env.GEMINI_API_KEY;
+    const keyPrefix = hasKey ? process.env.GEMINI_API_KEY.slice(0, 6) : null;
+
+    const completion = await client.chat.completions.create({
+      model: "gemini-2.5-flash",
+      messages: [{ role: "user", content: "Sadəcə 'ok' yaz." }],
+    });
+
+    return res.json({
+      ok: true,
+      hasKey,
+      keyPrefix,
+      content: completion.choices?.[0]?.message?.content ?? null,
+    });
+  } catch (e) {
+    console.error("DEBUG GEMINI ERROR:", e);
+    return res.status(500).json({
+      ok: false,
+      hasKey: !!process.env.GEMINI_API_KEY,
+      keyPrefix: process.env.GEMINI_API_KEY
+        ? process.env.GEMINI_API_KEY.slice(0, 6)
+        : null,
+      message: e.message,
+      status: e.status,
+      code: e.code,
+      type: e.type,
+      error: e.error,
+    });
+  }
+});
+
 // CHAT
 app.post("/chat", async (req, res) => {
   try {
@@ -67,7 +101,7 @@ Qaydalar:
 - Yalnız 1 düzgün cavab olsun
 - Hər sual üçün qısa izah ver
 - Heç bir əlavə mətn yazma
-- Yalnız JSON qaytar
+- Cavabı yalnız JSON şəklində qaytar
 
 Cavab formatı mütləq belə olsun:
 {
@@ -161,6 +195,9 @@ Cavab formatı mütləq belə olsun:
       error: "Quiz error",
       step: "outer_catch",
       details: e.message,
+      status: e.status,
+      code: e.code,
+      type: e.type,
     });
   }
 });
@@ -201,6 +238,10 @@ const contentMap = {
       book: "https://trims.edu.az",
     },
     "Vurma və bölməyə giriş": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Pullarımız": {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
@@ -382,6 +423,14 @@ const contentMap = {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
+    "Ev əşyaları": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Geyimlər": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
     "Present Continuous": {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
@@ -405,6 +454,10 @@ const contentMap = {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
+    "Azərbaycanın rəmzləri": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
     "Ailə şəcərəsi": {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
@@ -418,6 +471,10 @@ const contentMap = {
       book: "https://trims.edu.az",
     },
     "Yol hərəkəti qaydaları": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Tarixi yerlər": {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
@@ -437,6 +494,10 @@ const contentMap = {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
+    "Qəhrəmanlarımız": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
     "Mən və cəmiyyət": {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
@@ -450,6 +511,10 @@ const contentMap = {
       book: "https://trims.edu.az",
     },
     "Vətənimiz Azərbaycan": {
+      video: "https://video.edu.az",
+      book: "https://trims.edu.az",
+    },
+    "Tarixi şəxsiyyətlər": {
       video: "https://video.edu.az",
       book: "https://trims.edu.az",
     },
