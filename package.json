@@ -1,15 +1,30 @@
 {
   "name": "aida-backend",
   "version": "1.0.0",
+<<<<<<< HEAD
   "description": "AIDA backend",
+=======
+  "description": "AIDA AI backend",
+>>>>>>> 51aceca25159aa95616f1bfbba70ab447c73c856
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
     "start": "node server.js"
   },
+<<<<<<< HEAD
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",
     "express": "^4.19.2"
+=======
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
+    "express": "^4.19.2",
+    "openai": "^4.52.0"
+>>>>>>> 51aceca25159aa95616f1bfbba70ab447c73c856
   }
 }
